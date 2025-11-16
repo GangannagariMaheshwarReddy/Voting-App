@@ -1,11 +1,10 @@
-// App.jsx
 import React, { useEffect, useRef, useState } from "react";
 
 export default function App() {
   const [c1, setC1] = useState(0);
   const [c2, setC2] = useState(0);
   const [c3, setC3] = useState(0);
-  const [theme, setTheme] = useState("light"); 
+  const [theme, setTheme] = useState("light");
   const [lastWinner, setLastWinner] = useState(null);
   const [confettiActive, setConfettiActive] = useState(false);
   const confettiRef = useRef(null);
@@ -14,7 +13,6 @@ export default function App() {
 
   const total = c1 + c2 + c3;
 
-  
   let winnerText = "";
   if (total === 0) winnerText = "No votes yet — Start voting!";
   else if (c1 > c2 && c1 > c3) winnerText = "Candidate 1 wins!";
@@ -22,10 +20,8 @@ export default function App() {
   else if (c3 > c1 && c3 > c2) winnerText = "Candidate 3 wins!";
   else winnerText = "It's a tie — re-poll!";
 
- 
   const audioCtxRef = useRef(null);
   useEffect(() => {
-    
     audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
     return () => {
       if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
@@ -72,7 +68,17 @@ export default function App() {
     o2.stop(now + 0.82);
   }
 
-  
+  // Responsive breakpoint detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 600);
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 600);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Confetti canvas setup
   useEffect(() => {
     const canvas = confettiRef.current;
     if (!canvas) return;
@@ -81,13 +87,18 @@ export default function App() {
     let raf;
 
     function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
     }
     resize();
     window.addEventListener("resize", resize);
 
-    function spawnConfetti(x = canvas.width / 2, y = canvas.height / 3, spread = 120, count = 120) {
+    function spawnConfetti(x = canvas.width / (2 * (window.devicePixelRatio || 1)), y = canvas.height / (3 * (window.devicePixelRatio || 1)), spread = 120, count = 120) {
       const colors = ["#ff4d6d", "#ffd166", "#6ee7b7", "#7dd3fc", "#c084fc", "#ffd1dc"];
       for (let i = 0; i < count; i++) {
         const angle = (Math.PI / 180) * (Math.random() * spread - spread / 2);
@@ -110,7 +121,7 @@ export default function App() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
-        p.vy += 0.15; 
+        p.vy += 0.15;
         p.vx *= 0.995;
         p.x += p.vx;
         p.y += p.vy;
@@ -131,7 +142,6 @@ export default function App() {
 
     step();
 
-    
     const unsub = () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
@@ -142,8 +152,8 @@ export default function App() {
     return unsub;
   }, []);
 
+  // Confetti effect on winner change
   useEffect(() => {
-   
     const isClearWinner =
       total > 0 &&
       ((c1 > c2 && c1 > c3) || (c2 > c1 && c2 > c3) || (c3 > c1 && c3 > c2));
@@ -159,38 +169,43 @@ export default function App() {
     if (currentWinner && currentWinner !== lastWinner) {
       setLastWinner(currentWinner);
       setConfettiActive(true);
-      
+
       const canvas = confettiRef.current;
       if (canvas && canvas._spawnConfetti) {
         canvas._spawnConfetti(window.innerWidth / 2, window.innerHeight / 3, 160, 180);
       }
       playWinnerSound();
 
-     
       clearTimeout(confettiTimerRef.current);
       confettiTimerRef.current = setTimeout(() => setConfettiActive(false), 2000);
     }
-    
+
     if (!currentWinner) {
       setLastWinner(null);
     }
-    
   }, [c1, c2, c3]);
 
- 
+  // Particles background canvas with proper scaling
   useEffect(() => {
     const canvas = particlesRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    let w = (canvas.width = window.innerWidth);
-    let h = (canvas.height = window.innerHeight);
+    const dpr = window.devicePixelRatio || 1;
+
+    let w = (canvas.width = window.innerWidth * dpr);
+    let h = (canvas.height = window.innerHeight * dpr);
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
     const particles = [];
     const count = Math.max(12, Math.floor(window.innerWidth / 120));
 
     for (let i = 0; i < count; i++) {
       particles.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
         r: 6 + Math.random() * 28,
         vx: (Math.random() - 0.5) * 0.4,
         vy: (Math.random() - 0.5) * 0.6,
@@ -199,21 +214,25 @@ export default function App() {
     }
 
     function resize() {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
+      w = canvas.width = window.innerWidth * dpr;
+      h = canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
     }
     window.addEventListener("resize", resize);
 
     let raf;
     function draw() {
-      ctx.clearRect(0, 0, w, h);
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
-        if (p.x < -50) p.x = w + 50;
-        if (p.x > w + 50) p.x = -50;
-        if (p.y < -50) p.y = h + 50;
-        if (p.y > h + 50) p.y = -50;
+        if (p.x < -50) p.x = window.innerWidth + 50;
+        if (p.x > window.innerWidth + 50) p.x = -50;
+        if (p.y < -50) p.y = window.innerHeight + 50;
+        if (p.y > window.innerHeight + 50) p.y = -50;
         ctx.beginPath();
         ctx.fillStyle = `rgba(255,255,255,${p.alpha})`;
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -228,20 +247,19 @@ export default function App() {
     };
   }, []);
 
-  
   function handleVote(setter, prev) {
     playClickSound();
-    
     setter(prev + 1);
   }
 
-  
+  // Responsive style helpers
   const dark = theme === "dark";
   const rootStyle = {
     fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial",
     minHeight: "100vh",
     position: "relative",
     overflowX: "hidden",
+    maxWidth: "100vw",
     background: dark
       ? "radial-gradient(1200px 600px at 10% 10%, rgba(40,40,60,0.24), transparent), linear-gradient(180deg,#071026 0%, #0b1b2b 70%)"
       : "linear-gradient(180deg,#fdfbfb 0%, #e6e9f0 70%)",
@@ -249,16 +267,16 @@ export default function App() {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "28px",
+    padding: isMobile ? 12 : 28,
   };
 
   const cardStyle = {
     width: "100%",
     maxWidth: 880,
     borderRadius: 20,
-    padding: 28,
+    padding: isMobile ? 12 : 28,
     display: "grid",
-    gridTemplateColumns: "1fr 380px",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr 380px",
     gap: 22,
     background: dark ? "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" : "rgba(255,255,255,0.7)",
     boxShadow: dark ? "0 10px 40px rgba(0,0,0,0.6)" : "0 10px 30px rgba(20,40,60,0.08)",
@@ -267,20 +285,20 @@ export default function App() {
   };
 
   const leftStyle = {
-    padding: 12,
+    padding: isMobile ? 6 : 12,
     display: "flex",
     flexDirection: "column",
-    gap: 20,
+    gap: isMobile ? 12 : 20,
   };
 
   const rightStyle = {
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     borderRadius: 14,
     background: dark ? "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))" : "rgba(0,0,0,0.02)",
   };
 
   const titleStyle = {
-    fontSize: 28,
+    fontSize: isMobile ? 22 : 28,
     fontWeight: 700,
     letterSpacing: -0.3,
     display: "flex",
@@ -296,13 +314,12 @@ export default function App() {
 
   const buttonsContainerStyle = {
     display: "flex",
-    flexDirection: "row",
+    flexDirection: isMobile ? "column" : "row",
     gap: 12,
     flexWrap: "wrap",
     alignItems: "center",
   };
 
-  
   function buttonStyle(variant = 1) {
     const gradient =
       variant === 1
@@ -311,7 +328,7 @@ export default function App() {
         ? "linear-gradient(135deg,#7bd389,#3bd5d0)"
         : "linear-gradient(135deg,#7dd3fc,#7c5cff)";
     return {
-      padding: "12px 18px",
+      padding: "14px 18px",
       borderRadius: 12,
       border: "none",
       color: dark ? "#02121a" : "#031019",
@@ -322,12 +339,13 @@ export default function App() {
       boxShadow: "0 6px 18px rgba(0,0,0,0.18), inset 0 -4px 12px rgba(0,0,0,0.06)",
       transform: "translateZ(0)",
       transition: "transform 180ms ease, box-shadow 180ms ease, filter 180ms ease",
-      minWidth: 180,
+      minWidth: isMobile ? "100%" : 180,
       display: "inline-flex",
       justifyContent: "center",
       alignItems: "center",
       position: "relative",
       overflow: "hidden",
+      marginBottom: isMobile ? 8 : 0,
     };
   }
 
@@ -356,24 +374,26 @@ export default function App() {
     }, 650);
   }
 
-
   const maxVotes = Math.max(1, c1, c2, c3);
 
- 
   const winnerGlow = confettiActive ? { filter: "drop-shadow(0 8px 30px rgba(0,255,180,0.14))" } : {};
 
   return (
     <div style={rootStyle}>
-    
-      <canvas ref={particlesRef} style={{ position: "fixed", top: 0, left: 0, zIndex: 0, pointerEvents: "none" }} />
-      <canvas ref={confettiRef} style={{ position: "fixed", top: 0, left: 0, zIndex: 10, pointerEvents: "none" }} />
+      <canvas
+        ref={particlesRef}
+        style={{ position: "fixed", top: 0, left: 0, zIndex: 0, pointerEvents: "none", maxWidth: "100vw" }}
+      />
+      <canvas
+        ref={confettiRef}
+        style={{ position: "fixed", top: 0, left: 0, zIndex: 10, pointerEvents: "none", maxWidth: "100vw" }}
+      />
 
       <div style={{ ...cardStyle, zIndex: 20 }}>
-       
         <div style={leftStyle}>
           <div>
             <div style={titleStyle}>
-              <span style={{ fontSize: 30 }}>🗳️</span>
+              <span style={{ fontSize: isMobile ? 26 : 30 }}>🗳️</span>
               <div>
                 Voting Booth
                 <div style={subtitleStyle}>Cast your vote — results update live</div>
@@ -431,7 +451,15 @@ export default function App() {
             </button>
           </div>
 
-          <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 6 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              marginTop: isMobile ? 12 : 6,
+              flexWrap: isMobile ? "wrap" : "nowrap",
+            }}
+          >
             <div style={{ fontWeight: 900, opacity: 0.9 }}>Total Votes</div>
             <div
               style={{
@@ -467,8 +495,7 @@ export default function App() {
             </div>
           </div>
 
-        
-          <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
+          <div style={{ display: "flex", gap: isMobile ? 8 : 12, marginTop: isMobile ? 12 : 18, flexWrap: isMobile ? "wrap" : "nowrap" }}>
             <div
               style={{
                 flex: 1,
@@ -508,7 +535,6 @@ export default function App() {
           </div>
         </div>
 
-        
         <div style={rightStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div>
@@ -520,9 +546,7 @@ export default function App() {
           </div>
 
           <div style={{ marginTop: 18 }}>
-            
-            <div style={{ display: "flex", gap: 12, alignItems: "end", height: 210 }}>
-              
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", height: 210 }}>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                 <div
                   style={{
@@ -544,7 +568,6 @@ export default function App() {
                 <div style={{ fontSize: 13, marginTop: 6, fontWeight: 700 }}>Candidate 1</div>
               </div>
 
-             
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                 <div
                   style={{
@@ -565,7 +588,6 @@ export default function App() {
                 <div style={{ fontSize: 13, marginTop: 6, fontWeight: 700 }}>Candidate 2</div>
               </div>
 
-              
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                 <div
                   style={{
@@ -588,7 +610,6 @@ export default function App() {
             </div>
           </div>
 
-          
           <div
             style={{
               marginTop: 18,
@@ -600,6 +621,7 @@ export default function App() {
               gap: 12,
               background: dark ? "linear-gradient(180deg, rgba(0,0,0,0.15), rgba(255,255,255,0.02))" : "rgba(255,255,255,0.95)",
               ...winnerGlow,
+              flexWrap: isMobile ? "wrap" : "nowrap",
             }}
           >
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -615,7 +637,8 @@ export default function App() {
                     total > 0 && winnerText.includes("wins")
                       ? "linear-gradient(135deg,#00ffae,#00bcd4)"
                       : "linear-gradient(135deg,#9aa2ff,#bdb8ff)",
-                  boxShadow: total > 0 && winnerText.includes("wins") ? "0 12px 36px rgba(0,255,174,0.12)" : "0 8px 18px rgba(0,0,0,0.06)",
+                  boxShadow:
+                    total > 0 && winnerText.includes("wins") ? "0 12px 36px rgba(0,255,174,0.12)" : "0 8px 18px rgba(0,0,0,0.06)",
                   transform: confettiActive ? "scale(1.06)" : "scale(1)",
                   transition: "transform 320ms cubic-bezier(.2,.9,.2,1), box-shadow 320ms",
                 }}
@@ -625,16 +648,13 @@ export default function App() {
 
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800 }}>{winnerText}</div>
-                <div style={{ fontSize: 13, opacity: 0.8 }}>
-                  {total === 0 ? "No votes yet" : "Live from your session"}
-                </div>
+                <div style={{ fontSize: 13, opacity: 0.8 }}>{total === 0 ? "No votes yet" : "Live from your session"}</div>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: isMobile ? "wrap" : "nowrap" }}>
               <button
                 onClick={() => {
-                  
                   setC1(0);
                   setC2(0);
                   setC3(0);
@@ -646,6 +666,8 @@ export default function App() {
                   cursor: "pointer",
                   fontWeight: 800,
                   background: dark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.04)",
+                  minWidth: isMobile ? "100%" : "auto",
+                  marginBottom: isMobile ? 8 : 0,
                 }}
               >
                 Reset
@@ -653,7 +675,6 @@ export default function App() {
 
               <button
                 onClick={() => {
-                  
                   const canvas = confettiRef.current;
                   if (canvas && canvas._spawnConfetti) {
                     canvas._spawnConfetti(window.innerWidth / 2, window.innerHeight / 3, 140, 120);
@@ -667,6 +688,7 @@ export default function App() {
                   cursor: "pointer",
                   fontWeight: 800,
                   background: "linear-gradient(90deg,#ffd166,#ff8fa3)",
+                  minWidth: isMobile ? "100%" : "auto",
                 }}
               >
                 Celebrate
@@ -676,7 +698,6 @@ export default function App() {
         </div>
       </div>
 
-     
       <div
         style={{
           position: "fixed",

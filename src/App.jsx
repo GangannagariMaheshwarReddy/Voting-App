@@ -648,7 +648,7 @@ export default function App() {
 
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800 }}>{winnerText}</div>
-                <div style={{ fontSize: 13, opacity: 0.8 }}>{total === 0 ? "No votes yet" : "Live from your session"}</div>
+                <div style={{ fontSize: 13, opacity: 0.8 }}>{total === 0 ? "No votes yet Please cast your vote" : "Live from your session"}</div>
               </div>
             </div>
 

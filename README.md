@@ -1,4 +1,4 @@
-# 🗳️ Advanced Voting App ! ! !
+# 🗳️ Advanced Voting App
 
 A modern and interactive **single-page Voting Application** built using **React**, featuring:
 
